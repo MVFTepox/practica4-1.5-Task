@@ -3,7 +3,7 @@
     <ul class="list-none overflow-hidden -rotate-3 shadow-2xl shadow-black ">
       <li>
         <div class="rounded-full bg-red-500 w-5 h-5 relative top-8 left-72 shadow-lg shadow-black "></div>
-        <a href="#" class="textdecoration-none decoration-none text-[#000000] bg-[#ffc] block h-auto w-[20em] p-8">
+        <a href="#" class="textdecoration-none decoration-none text-[#000000] bg-[#ffc] block h-auto w-[20em] lg:w-[20em]  p-8">
           <form @submit.prevent="onSubmit">
             <div class="mb-3">
               <label for="username" class="text-2xl">Nombre de usuario</label>
@@ -15,15 +15,19 @@
               <input type="email" id="email" class="border-2 border-[#000000] border-solid rounded-md w-full"
                 placeholder="Ingresa tu correo" v-model="email" required>
             </div>
+          
+            <div class="mb-3">
+              <label for="password" class="text-2xl">Contraseña</label>
+              <input type="password" id="password" class="border-2 border-[#000000] border-solid rounded-md w-full"
+                placeholder="Ingresa tu contraseña" v-model="password" required>
+            </div>
             <div class="mb-3">
               <label for="passwordConfirmation" class="text-2xl">Confirmar Contraseña</label>
               <input type="password" id="passwordConfirmation" class="border-2 border-[#000000] border-solid rounded-md w-full"
                 placeholder="Confirma tu contraseña" v-model="passwordConfirmation" required>
             </div>
-            <div class="mb-3">
-              <label for="password" class="text-2xl">Contraseña</label>
-              <input type="password" id="password" class="border-2 border-[#000000] border-solid rounded-md w-full"
-                placeholder="Ingresa tu contraseña" v-model="password" required>
+            <div class="mb-3 justify-center flex">
+              <a href="/login" class=" text-[#3434ff] text-center">volver al pagina de inicio</a>
             </div>
             <div class="mb-3">
               <input type="submit" value="Regístrate"
@@ -37,9 +41,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref , onMounted} from 'vue';
 import router from '../Router/Router';
-import { registerStore } from '../store/registroStore';
+import { useAuthStore } from '../store/authStore';
 
 export default defineComponent({
   setup() {
@@ -48,64 +52,38 @@ export default defineComponent({
     const password = ref('');
     const passwordConfirmation = ref('');
 
-    const register = registerStore();
+    const auth = useAuthStore();
 
-    const validateEmail = (email: string) => {
-      const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-      return re.test(String(email).toLowerCase());
-    };
-
-    const confirmPassword = (password: string, passwordConfirmation: string) => {
-      return password === passwordConfirmation;
-    };
-
+    onMounted(async () => {
+      await auth.fetchUsers();
+    })
     const onSubmit = () => {
-      // Validaciones
-      if (!confirmPassword(password.value, passwordConfirmation.value)) {
-        alert('Las contraseñas no coinciden');
-        return;
-      }
-
-      if (!validateEmail(email.value)) {
-        alert('Por favor ingresa un correo válido');
-        return;
-      }
-
       if (username.value === '') {
         alert('Por favor ingresa un nombre de usuario');
         return;
       }
-
-      if (password.value === '') {
-        alert('Por favor ingresa una contraseña');
-        return;
-      }
-
       if (email.value === '') {
         alert('Por favor ingresa un correo');
         return;
       }
-
+      if (password.value === '') {
+        alert('Por favor ingresa una contraseña');
+        return;
+      }
       if (passwordConfirmation.value === '') {
         alert('Por favor confirma tu contraseña');
         return;
       }
+      if (password.value !== passwordConfirmation.value) {
+        alert('Las contraseña no coinciden');
+        return;
+      }
 
-      // Crear objeto de usuario
-      const user = {
-        id: Math.floor(Math.random() * 10000), // Genera un ID aleatorio
-        username: username.value,
-        email: email.value,
-        password: password.value,
-      };
-
-      // Guardar el usuario en el store
-      register.users.push(user); // Guardar en el arreglo de usuarios
-
-      alert('Registro exitoso con ID: ' + user.id);
-
-      // Redirigir al inicio de sesión o a otra página
+      auth.register(username.value, email.value, password.value);
+      console.log(auth);
       router.push({ name: 'login' });
+
+      
     };
 
     return {

@@ -2,7 +2,7 @@ import { createRouter , createWebHistory } from "vue-router";
 import Home from "../view/Home.vue";
 import Register from "../view/register.vue";
 import Login from "../view/Login.vue";
-import { authStore } from "../store/authStore";
+import { useAuthStore } from "../store/authStore";
 
 export const router = createRouter({
     history: createWebHistory(),
@@ -12,7 +12,7 @@ export const router = createRouter({
             name: "home",
             component: Home,
             beforeEnter: (to, from, next) => {
-                if (authStore().isLogedIn) {
+                if (useAuthStore().isLoggedIn) {
                     next();
                 } else {
                     next("/login");

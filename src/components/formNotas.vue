@@ -34,7 +34,7 @@
 
 <script  lang="ts">
 import { defineComponent, ref } from 'vue';
-import { useTaskForIdUserStore } from '../store/TaskForIdUserStore';
+import { useTaskStore  } from '../store/TaskForIdUserStore';
 
 export default defineComponent({
     name: 'FormNotas',
@@ -42,30 +42,20 @@ export default defineComponent({
     setup() {
         const Title = ref('');
         const Content = ref('');
-        const auth = useTaskForIdUserStore();
-        const onSubmit = () => {           
-            
-            if (Title.value === '') {
-                alert('Ingresa un titulo');
-                return;
-            }
-            if (Content.value === '') {
-                alert('Ingresa un contenido');
-                return;
-            }
 
-            auth.addTask(Title.value, Content.value);
-            
-            alert('Nota creada exitosamente');
+        const onSubmit = () => {
+            const taskStore = useTaskStore();
+            taskStore.createTask(Title.value, Content.value);
             Title.value = '';
             Content.value = '';
         };
+
         return {
             Title,
-            Content,
-            onSubmit
+            Content,    
+            onSubmit,
         };
-    }
+    },
 });
 
 </script>

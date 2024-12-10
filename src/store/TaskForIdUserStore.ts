@@ -1,73 +1,140 @@
-import { defineStore } from "pinia";
-import { authStore } from "./authStore"; // Asegúrate de que este es el nombre correcto de tu store de autenticación.
+import { defineStore } from 'pinia';
+import { useAuthStore } from './authStore';
 
-interface Task {
-  id: number;
-  title: string;
-  task: string;
-  userId: number;
-  dateStart: Date;
-  dateEnd: Date | null;
-  isCompleted: boolean;
-  isDeleted: boolean; // Agregamos esta propiedad
+export const useTaskStore = defineStore('task', {
+    state: () => ({
+        tasks: [] as Array<{
+            id: string;
+            userID: string;
+            title: string;
+            content: string;
+            dateStart: string;
+            dateEnd: string | null;
+            isComplete: boolean;
+        }>,
+        task: null as {
+            id: string;
+            userID: string;
+            title: string;
+            content: string;
+            dateStart: string;
+            dateEnd: string | null;
+            isComplete: boolean;
+        } | null,
+
+        userID: null as string | null
+    }),
+    actions: {
+        async createTask(title: string, content: string) {
+            const authStore = useAuthStore();
+            const userID = authStore.user?.id || '';
+            const dateStart = new Date().toISOString();
+            const dateEnd = null;
+            const isComplete = false;
+
+            if (!userID) {
+                console.error('Error: el usuario no está autenticado');
+                return;
+            }
+            console.log(userID, title, content, dateStart, dateEnd, isComplete);
+            try {
+                const response = await fetch('http://localhost:3000/api/task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userID,
+                        title,
+                        content,
+                        dateStart,
+                        dateEnd,
+                        isComplete,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error creando tarea');
+                }
+
+                const data = await response.json();
+                this.tasks.push(data);
+            } catch (error) {
+                console.error('Error en createTask:', error);
+
+            }
+        },
+
+        async fetchTasks() {
+            try {
+                const response = await fetch('http://localhost:3000/api/task');
+                if (!response.ok) {
+                    throw new Error('Error obteniendo tareas');
+                }
+                const data = await response.json();
+                this.tasks = data;
+            } catch (error) {
+                console.error('Error en fetchTasks:', error);
+            }
+        },
+
+        async fetchTasksByUserID(userID: string) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/tasks/${userID}`);
+                if (!response.ok) {
+                    throw new Error(`Error obteniendo tareas del usuario con ID ${userID}`);
+                }
+                const data = await response.json();
+                this.tasks = data;
+            } catch (error) {
+                console.error('Error en fetchTasksByUserID:', error);
+            }
+        },
+
+        async updateTask(id: string, dateEnd: string | null, isComplete: boolean) {
+            try {
+                const { title, content, dateStart } = this.task || {};
+                const response = await fetch(`http://localhost:3000/api/task/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title,
+                        content,
+                        dateStart,
+                        dateEnd,
+                        isComplete,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error actualizando tarea con ID ${id}`);
+                }
+
+                const data = await response.json();
+                this.tasks = this.tasks.map(task => (task.id === id ? data : task));
+            } catch (error) {
+                console.error('Error en updateTask:', error);
+            }
+        },
+
+        //BORRAR TAREA PERO SIN  BORRAR EL HISTORIAL 
+        async deleteTask(id: string) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/task/${id}`, {
+                    method: 'DELETE',
+                });
+                if (!response.ok) {
+                    throw new Error(`Error eliminando tarea con ID ${id}`);
+                }
+                   
+                this.tasks = this.tasks.filter(task => task.id !== id);
+            } catch (error) {
+                console.error('Error en deleteTask:', error);
+            }
+        },
+    },
 }
 
-export const useTaskForIdUserStore = defineStore("taskForIdUser", {
-  state: () => ({
-    tasks: [] as Task[],
-  }),
-
-  actions: {
-    // Añadir una nueva tarea asociada a un usuario
-    addTask(title: string, task: string) {
-      const userStore = authStore(); // Obtener el store de autenticación
-      const userId = userStore.id; // Obtener la id del usuario autenticado
-      const id = Date.now(); // Crear un id único basado en el tiempo actual
-      const dateStart = new Date();
-
-      this.tasks.push({
-        id,
-        title,
-        task,
-        userId,
-        dateStart,
-        dateEnd: null,
-        isCompleted: false, // Inicialmente la tarea no está completada
-        isDeleted: false, // Inicialmente no está eliminada
-      });
-    },
-
-    // Establecer la fecha de finalización y marcar como completada
-    completeTask(id: number) {
-      const task = this.tasks.find((task) => task.id === id);
-      if (task && !task.isCompleted) {
-        task.isCompleted = true;
-        task.dateEnd = new Date(); // Asignar la fecha de finalización
-      }
-    },
-
-    // Obtener la ID de la última tarea
-    getLastTaskId(): number | null {
-      if (this.tasks.length === 0) return null; // Retornar null si no hay tareas
-      return this.tasks[this.tasks.length - 1].id; // Retornar la ID de la última tarea
-    },
-
-    // Eliminar una tarea (marcar como eliminada)
-    deleteTask(id: number) {
-      const task = this.tasks.find((task) => task.id === id);
-      if (task) {
-        task.isDeleted = true; // Marcar como eliminada
-        // Aquí puedes agregar lógica para mover la tarea al historial si es necesario.
-      }
-    },
-
-    // Obtener todas las tareas de un usuario específico
-    getUserTasks() {
-      const userStore = authStore();
-      const userId = userStore.id; // Obtener la id del usuario autenticado
-      return this.tasks.filter((task) => task.userId === userId && !task.isDeleted); // Filtrar tareas eliminadas
-    },
-  },
-
-  persist: true,
-});
+);

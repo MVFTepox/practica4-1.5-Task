@@ -1,30 +1,27 @@
 <template>
-  <div>
-    <ul>
+  <div >
+    <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <li v-for="item in userTasks" :key="item.id">
         <div class="rounded-full bg-red-500 w-5 h-5 relative top-8 left-48 z-10 shadow-lg shadow-black"></div>
 
         <a href="#">
-          <h2 :class="['text-3xl', { 'line-through': item.isCompleted }]">{{ item.title }}</h2>
-          <p :class="['text-xl', { 'line-through': item.isCompleted }]">{{ item.task }}</p>
+          <h2 :class="['text-3xl', { 'line-through': item.isComplete }]">{{ item.title }}</h2>
+          <p :class="['text-xl', { 'line-through': item.isComplete }]">{{ item.content }}</p>
 
-          <!-- Mostrar fecha de creación -->
           <p class="text-sm">Creado el: {{ formatDate(item.dateStart) }}</p>
-
-          <!-- Mostrar fecha de completado si está completada -->
-          <!-- Mostrar fecha de completado si está completada -->
-          <p v-if="item.isCompleted && item.dateEnd" class="text-sm text-green-500">
+          
+          <p v-if="item.isComplete && item.dateEnd" class="text-sm text-green-500">
             Se finalizó el: {{ formatDate(item.dateEnd) }}
           </p>
 
           <hr class="my-3 border border-[#000000]" />
           <div class="mt-3 grid grid-cols-2 gap-3">
             <button type="button" class="bg-green-500 rounded-lg text-white hover:bg-green-400 hover:cursor-pointer"
-              @click="completeTask(item.id)" v-if="!item.isCompleted">
-              Completa
+              @click="completeTask(item.id)" v-if="!item.isComplete">
+              Completar
             </button>
             <button type="button" class="bg-red-500 rounded-lg text-white hover:bg-red-400 hover:cursor-pointer"
-              @click="deleteTask(item.id)">
+              @click="Borrar(item.id)">
               Borrar
             </button>
           </div>
@@ -35,53 +32,70 @@
 </template>
 
 
+
 <script lang="ts">
 import { defineComponent } from "vue";
-import { useTaskForIdUserStore } from "../store/TaskForIdUserStore"; // Asegúrate de que este es el nombre correcto de tu store de tareas
+import { useTaskStore } from "../store/TaskForIdUserStore";
+import {useAuthStore} from "../store/authStore";
+import { useHistoryStore } from "../store/historyStore";
+import {useUserStore} from "../store/userStoire";
 
 export default defineComponent({
   setup() {
-    const taskStore = useTaskForIdUserStore();
-    const userTasks = taskStore.getUserTasks();
+    const taskStore = useTaskStore();
+    const auth = useAuthStore();
+    const historyStore = useHistoryStore();
+    const userStore = useUserStore();
 
-    // Función para marcar una tarea como completada
-    const completeTask = (id: number) => {
-      const task = userTasks.find(task => task.id === id);
-      if (task && !task.isCompleted) {
-        task.isCompleted = true; // Cambiar el estado a completada
-        task.dateEnd = new Date(); // Asignar la fecha de finalización
+    userStore.id_user = "hsdgagdhjkagdhjk";
+    
+    const userTasks = taskStore.tasks;
+
+    function createhistory(userID: string, title: string, content: string, dateStart: string, dateEnd: string | null) {
+      historyStore.createHistory(userID, title, content, dateStart, dateEnd);
+      console.log(historyStore.history);
+    }
+
+    const completeTask = (id: string) => {
+      const task = taskStore.tasks.find((task) => task.id === id);
+      if (task) {
+        task.id = id;
+        task.isComplete = true;
+        task.dateEnd = new Date().toISOString();
+        taskStore.updateTask(task.id, task.dateEnd, task.isComplete);
+        createhistory(task.userID, task.title, task.content, task.dateStart, task.dateEnd);        
       }
     };
 
-    // Función para eliminar la tarea
-    const deleteTask = (id: number) => {
+    const Borrar = (id: string) => {
       taskStore.deleteTask(id);
       window.location.reload();
     };
 
-    // Función para formatear la fecha
-    const formatDate = (date: Date | null) => {
-      if (!date) return ''; // Retorna una cadena vacía si date es null
+
+    const formatDate = (date: string | null) => {
+      if (!date) return "";
       const options: Intl.DateTimeFormatOptions = {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-        second: 'numeric'
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
       };
-      return new Date(date).toLocaleDateString('es-ES', options);
+      return new Date(date).toLocaleDateString("es-ES", options);
     };
 
     return {
       userTasks,
       completeTask,
-      deleteTask,
-      formatDate
+      Borrar,
+      formatDate,
     };
   },
 });
 </script>
+
 
 <style scoped>
 ul,
